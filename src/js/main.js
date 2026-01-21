@@ -9,6 +9,7 @@ import { initDatabase, getStats } from './db/database.js';
 import { buildTree, flattenTree } from './tree/builder.js';
 import { Search } from './search/search.js';
 import { SearchUI } from './search/ui.js';
+import { Modal } from './modal/modal.js';
 
 class App {
     constructor() {
@@ -38,12 +39,18 @@ class App {
         this.interaction = new Interaction(
             this.canvas,
             this.viewport,
-            () => this.nodes
+            () => this.nodes,
+            {
+                onNodeClick: (node) => this.handleNodeClick(node)
+            }
         );
 
         // Initialize search (will be fully set up after DB loads)
         this.search = null;
         this.searchUI = null;
+
+        // Initialize modal (will be fully set up after DB loads)
+        this.modal = null;
 
         // Start the render loop
         this.startRenderLoop();
@@ -67,6 +74,9 @@ class App {
 
             // Initialize search functionality
             this.initializeSearch();
+
+            // Initialize modal
+            this.initializeModal();
 
             // Enable search input
             this.searchInput.disabled = false;
@@ -110,6 +120,30 @@ class App {
                 this.handleTermSelected(term);
             }
         });
+    }
+
+    /**
+     * Initialize the modal for viewing term details
+     */
+    initializeModal() {
+        this.modal = new Modal({
+            onSelectTerm: (termId, parentNode) => {
+                // When a term is clicked in the modal, add it connected to the parent node
+                this.addConnectedNode(termId, parentNode);
+            },
+            onDeleteNode: (node) => {
+                // Remove the node and its subtree from the canvas
+                this.removeNodeTree(node);
+            }
+        });
+    }
+
+    /**
+     * Handle when a node is clicked on the canvas
+     */
+    handleNodeClick(node) {
+        console.log('Node clicked:', node);
+        this.modal.open(node.id, node);
     }
 
     /**
@@ -165,6 +199,90 @@ class App {
         this.nodes = [];
         this.treeCount = 0;
         this.addTree(termId);
+    }
+
+    /**
+     * Add a new node connected to an existing node on the canvas
+     * @param {string} termId - The term ID to add
+     * @param {object} parentNode - The node to connect to
+     */
+    addConnectedNode(termId, parentNode) {
+        // Build a tree starting from the new term
+        const tree = buildTree(termId, 10);
+
+        if (!tree) {
+            console.warn('No tree found for term:', termId);
+            return;
+        }
+
+        // Flatten for rendering
+        const flatNodes = flattenTree(tree);
+
+        if (flatNodes.length === 0) return;
+
+        // Check if this node is already on the canvas
+        const existingNode = this.nodes.find(n => n.id === termId);
+        if (existingNode) {
+            // Just center on it instead of adding duplicate
+            this.viewport.centerOn(existingNode.x, existingNode.y);
+            return;
+        }
+
+        // Position the new tree relative to the parent node
+        // Place it to the right of the parent (as a child) or left (as ancestor)
+        const offsetX = parentNode.x + 200;
+        const offsetY = parentNode.y;
+
+        // Layout the new tree
+        this.layoutTreeSimple(flatNodes, offsetX, offsetY);
+
+        // Connect the root of the new tree to the parent node visually
+        const newRoot = flatNodes[0];
+        newRoot.parent = parentNode;
+
+        // Add to parent's children array if not already there
+        if (!parentNode.children) {
+            parentNode.children = [];
+        }
+        if (!parentNode.children.includes(newRoot)) {
+            parentNode.children.push(newRoot);
+        }
+
+        // Add all new nodes to the canvas
+        this.nodes = [...this.nodes, ...flatNodes];
+
+        // Center on the new node
+        this.viewport.centerOn(newRoot.x, newRoot.y);
+    }
+
+    /**
+     * Remove a node and all its descendants from the canvas
+     * @param {object} node - The node to remove
+     */
+    removeNodeTree(node) {
+        // Collect all nodes to remove (this node and all descendants)
+        const nodesToRemove = new Set();
+
+        const collectDescendants = (n) => {
+            nodesToRemove.add(n);
+            if (n.children) {
+                for (const child of n.children) {
+                    collectDescendants(child);
+                }
+            }
+        };
+
+        collectDescendants(node);
+
+        // Remove from parent's children array
+        if (node.parent && node.parent.children) {
+            node.parent.children = node.parent.children.filter(c => c !== node);
+        }
+
+        // Filter out the removed nodes
+        this.nodes = this.nodes.filter(n => !nodesToRemove.has(n));
+
+        console.log(`Removed ${nodesToRemove.size} nodes from canvas`);
     }
 
     /**

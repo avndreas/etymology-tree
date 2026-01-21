@@ -3,16 +3,26 @@
  * Differentiates between panning the canvas and dragging individual nodes
  */
 export class Interaction {
-    constructor(canvas, viewport, getNodes) {
+    constructor(canvas, viewport, getNodes, options = {}) {
         this.canvas = canvas;
         this.viewport = viewport;
         this.getNodes = getNodes; // Function that returns current nodes array
+
+        // Click callback
+        this.onNodeClick = options.onNodeClick || (() => {});
 
         // Drag state
         this.isDragging = false;
         this.dragTarget = null; // null = pan canvas, otherwise = node being dragged
         this.lastMouseX = 0;
         this.lastMouseY = 0;
+
+        // Click detection state
+        this.mouseDownX = 0;
+        this.mouseDownY = 0;
+        this.mouseDownNode = null;
+        this.hasMoved = false;
+        this.clickThreshold = 5; // pixels of movement allowed for a click
 
         // Touch state for pinch-to-zoom
         this.lastPinchDist = 0;
@@ -102,6 +112,12 @@ export class Interaction {
             this.lastMouseX = coords.x;
             this.lastMouseY = coords.y;
 
+            // Track for click detection
+            this.mouseDownX = coords.x;
+            this.mouseDownY = coords.y;
+            this.mouseDownNode = hitNode;
+            this.hasMoved = false;
+
             // Change cursor based on what we're dragging
             this.canvas.style.cursor = hitNode ? 'grabbing' : 'grabbing';
         });
@@ -111,13 +127,20 @@ export class Interaction {
                 // Hover state - check if over a node
                 const coords = this.getCanvasCoords(e);
                 const hitNode = this.hitTest(coords.x, coords.y);
-                this.canvas.style.cursor = hitNode ? 'grab' : 'grab';
+                this.canvas.style.cursor = hitNode ? 'pointer' : 'grab';
                 return;
             }
 
             const coords = this.getCanvasCoords(e);
             const dx = coords.x - this.lastMouseX;
             const dy = coords.y - this.lastMouseY;
+
+            // Check if we've moved past the click threshold
+            const totalDx = Math.abs(coords.x - this.mouseDownX);
+            const totalDy = Math.abs(coords.y - this.mouseDownY);
+            if (totalDx > this.clickThreshold || totalDy > this.clickThreshold) {
+                this.hasMoved = true;
+            }
 
             if (this.dragTarget) {
                 // Dragging a node - move it and all children in world coordinates
@@ -133,9 +156,15 @@ export class Interaction {
             this.lastMouseY = coords.y;
         });
 
-        window.addEventListener('mouseup', () => {
+        window.addEventListener('mouseup', (e) => {
+            // Check if this was a click (no significant movement) on a node
+            if (!this.hasMoved && this.mouseDownNode) {
+                this.onNodeClick(this.mouseDownNode);
+            }
+
             this.isDragging = false;
             this.dragTarget = null;
+            this.mouseDownNode = null;
             this.canvas.style.cursor = 'grab';
         });
 
@@ -182,6 +211,12 @@ export class Interaction {
                 this.dragTarget = hitNode;
                 this.lastMouseX = coords.x;
                 this.lastMouseY = coords.y;
+
+                // Track for tap detection
+                this.mouseDownX = coords.x;
+                this.mouseDownY = coords.y;
+                this.mouseDownNode = hitNode;
+                this.hasMoved = false;
             } else if (e.touches.length === 2) {
                 // Two fingers - prepare for pinch zoom
                 this.lastPinchDist = Math.hypot(
@@ -205,6 +240,13 @@ export class Interaction {
 
                 const dx = coords.x - this.lastMouseX;
                 const dy = coords.y - this.lastMouseY;
+
+                // Check if we've moved past the click threshold
+                const totalDx = Math.abs(coords.x - this.mouseDownX);
+                const totalDy = Math.abs(coords.y - this.mouseDownY);
+                if (totalDx > this.clickThreshold || totalDy > this.clickThreshold) {
+                    this.hasMoved = true;
+                }
 
                 if (this.dragTarget) {
                     const worldDx = dx / this.viewport.scale;
@@ -236,8 +278,14 @@ export class Interaction {
         }, { passive: false });
 
         this.canvas.addEventListener('touchend', () => {
+            // Check if this was a tap (no significant movement) on a node
+            if (!this.hasMoved && this.mouseDownNode) {
+                this.onNodeClick(this.mouseDownNode);
+            }
+
             this.isDragging = false;
             this.dragTarget = null;
+            this.mouseDownNode = null;
         });
     }
 }

@@ -9,14 +9,16 @@
  */
 import initSqlJs from 'sql.js';
 
-// Database singleton
+// Database singletons
 let db = null;
+let wordnetDb = null;
 let SQL = null;
 
 // IndexedDB cache config
 const DB_CACHE_NAME = 'etymology-db-cache';
 const DB_CACHE_KEY = 'etymology.db';
-const DB_VERSION = 1;
+const WORDNET_CACHE_KEY = 'wordnet.db';
+const DB_VERSION = 2;
 
 /**
  * Initialize the database
@@ -66,12 +68,57 @@ export async function initDatabase(onProgress = () => {}) {
         await saveToCache(dbData);
     }
 
-    onProgress('Opening database...');
+    onProgress('Opening etymology database...');
 
     // Open the database
     db = new SQL.Database(new Uint8Array(dbData));
 
+    // Now load WordNet database
+    onProgress('Loading WordNet dictionary...');
+    await loadWordNetDatabase(onProgress);
+
     onProgress('Ready!');
+}
+
+/**
+ * Load the WordNet definitions database
+ */
+async function loadWordNetDatabase(onProgress) {
+    // Try to load from cache first
+    let wordnetData = await loadFromCache(WORDNET_CACHE_KEY);
+
+    if (wordnetData) {
+        onProgress('Loading WordNet from cache...');
+    } else {
+        onProgress('Downloading WordNet dictionary...');
+
+        const response = await fetch('/wordnet.db');
+
+        if (!response.ok) {
+            console.warn('WordNet database not available, definitions will be disabled');
+            return;
+        }
+
+        const contentLength = response.headers.get('Content-Length');
+        const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+        if (total > 0) {
+            wordnetData = await readWithProgress(response, total, (msg) => {
+                // Rewrite progress message for WordNet
+                if (msg.includes('%')) {
+                    const percent = msg.match(/(\d+)%/)[1];
+                    onProgress(`Downloading WordNet dictionary... ${percent}%`);
+                }
+            });
+        } else {
+            wordnetData = await response.arrayBuffer();
+        }
+
+        onProgress('Caching WordNet...');
+        await saveToCache(wordnetData, WORDNET_CACHE_KEY);
+    }
+
+    wordnetDb = new SQL.Database(new Uint8Array(wordnetData));
 }
 
 /**
@@ -107,9 +154,10 @@ async function readWithProgress(response, total, onProgress) {
 
 /**
  * Load database from IndexedDB cache
+ * @param {string} cacheKey - Key to load from cache
  * @returns {Promise<ArrayBuffer|null>}
  */
-async function loadFromCache() {
+async function loadFromCache(cacheKey = DB_CACHE_KEY) {
     return new Promise((resolve) => {
         const request = indexedDB.open(DB_CACHE_NAME, DB_VERSION);
 
@@ -126,7 +174,7 @@ async function loadFromCache() {
             const idb = event.target.result;
             const transaction = idb.transaction('databases', 'readonly');
             const store = transaction.objectStore('databases');
-            const getRequest = store.get(DB_CACHE_KEY);
+            const getRequest = store.get(cacheKey);
 
             getRequest.onerror = () => resolve(null);
             getRequest.onsuccess = () => resolve(getRequest.result || null);
@@ -137,9 +185,10 @@ async function loadFromCache() {
 /**
  * Save database to IndexedDB cache
  * @param {ArrayBuffer} data
+ * @param {string} cacheKey - Key to save under
  * @returns {Promise<void>}
  */
-async function saveToCache(data) {
+async function saveToCache(data, cacheKey = DB_CACHE_KEY) {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_CACHE_NAME, DB_VERSION);
 
@@ -156,7 +205,7 @@ async function saveToCache(data) {
             const idb = event.target.result;
             const transaction = idb.transaction('databases', 'readwrite');
             const store = transaction.objectStore('databases');
-            store.put(data, DB_CACHE_KEY);
+            store.put(data, cacheKey);
 
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
@@ -297,4 +346,52 @@ export function getStats() {
         termCount,
         relationshipCount: relCount
     };
+}
+
+/**
+ * Get definitions for a word from WordNet
+ * Only works for English words
+ * @param {string} word - The word to look up
+ * @param {string} lang - Language name from etymology database
+ * @returns {Array<{pos: string, definition: string}>}
+ */
+export function getDefinitions(word, lang = '') {
+    // WordNet only has English definitions
+    // Check for various English language names used in the etymology database
+    const englishLangs = ['english', 'american english', 'british english', 'middle english', 'old english', 'scots english'];
+    const isEnglish = englishLangs.some(e => lang.toLowerCase().includes(e)) || lang.toLowerCase() === 'en';
+
+    if (!wordnetDb || !isEnglish) return [];
+
+    try {
+        const stmt = wordnetDb.prepare(`
+            SELECT DISTINCT s.pos, s.definition
+            FROM words w
+            JOIN synsets s ON w.synset_id = s.id
+            WHERE w.word = ? COLLATE NOCASE
+            ORDER BY s.pos, length(s.definition)
+        `);
+
+        stmt.bind([word]);
+
+        const results = [];
+        while (stmt.step()) {
+            const row = stmt.getAsObject();
+            results.push(row);
+        }
+        stmt.free();
+
+        return results;
+    } catch (error) {
+        console.warn('Error fetching definitions:', error);
+        return [];
+    }
+}
+
+/**
+ * Check if WordNet database is available
+ * @returns {boolean}
+ */
+export function hasWordNet() {
+    return wordnetDb !== null;
 }

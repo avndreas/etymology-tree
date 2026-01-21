@@ -1,29 +1,43 @@
+/* Modal overlay - hidden by default, shown with .active */
 #modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(58, 50, 38, 0.5);
+    background: rgba(58, 50, 38, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 500;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
-#modal-overlay.hidden {
-    display: none;
+#modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
 }
 
+/* Modal container */
 #modal {
     background: var(--node-bg);
     border: 2px solid var(--node-border);
     border-radius: 12px;
-    padding: 24px;
-    max-width: 500px;
+    max-width: 520px;
     width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
+    max-height: 85vh;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(58, 50, 38, 0.25);
+    transform: scale(0.95);
+    transition: transform 0.2s ease;
 }
 
+#modal-overlay.active #modal {
+    transform: scale(1);
+}
+
+/* Close button */
 #modal-close {
     position: absolute;
     top: 12px;
@@ -39,19 +53,211 @@
     align-items: center;
     justify-content: center;
     border-radius: 4px;
+    z-index: 10;
 }
 
 #modal-close:hover {
     background: var(--grid-color);
 }
 
-#modal-title {
-    margin-bottom: 16px;
-    padding-right: 32px;
-    font-size: 1.25em;
-    color: var(--text-color);
-}
-
+/* Modal content - scrollable */
 #modal-content {
     color: var(--text-color);
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Modal header with term and language */
+.modal-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-right: 32px;
+}
+
+.modal-title {
+    font-size: 1.5em;
+    color: var(--text-color);
+    margin: 0;
+    font-weight: 600;
+}
+
+.modal-lang {
+    font-size: 0.9em;
+    color: var(--accent-color);
+    font-style: italic;
+}
+
+/* Actions section */
+.modal-actions {
+    margin-bottom: 16px;
+}
+
+.modal-delete-btn {
+    background: transparent;
+    border: 1px solid #c44;
+    color: #c44;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.85em;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal-delete-btn:hover {
+    background: #c44;
+    color: white;
+}
+
+/* Sections */
+.modal-section {
+    margin-bottom: 20px;
+}
+
+.modal-section:last-child {
+    margin-bottom: 0;
+}
+
+.modal-section-title {
+    font-size: 0.95em;
+    color: var(--accent-color);
+    margin: 0 0 10px 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modal-section-count {
+    font-weight: normal;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+/* Definitions */
+.modal-definitions {
+    background: var(--background);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.definition-item {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.definition-item:last-child {
+    margin-bottom: 0;
+}
+
+.definition-pos {
+    display: inline-block;
+    background: var(--accent-color);
+    color: var(--node-bg);
+    font-size: 0.75em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.definition-text {
+    font-size: 0.95em;
+}
+
+.definition-more {
+    font-size: 0.85em;
+    color: var(--accent-color);
+    font-style: italic;
+    margin-top: 8px;
+}
+
+/* Scrollable term lists */
+.modal-list-scroll {
+    max-height: 180px;
+    overflow-y: auto;
+    background: var(--background);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.modal-term-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.modal-term-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.modal-term-item:hover {
+    background: var(--node-bg);
+}
+
+.term-name {
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.term-lang {
+    font-size: 0.85em;
+    color: var(--accent-color);
+    font-style: italic;
+}
+
+.term-reltype {
+    font-size: 0.75em;
+    color: var(--accent-color);
+    background: var(--grid-color);
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0.8;
+}
+
+.modal-empty {
+    color: var(--accent-color);
+    font-style: italic;
+    font-size: 0.9em;
+    margin: 0;
+    padding: 8px;
+    text-align: center;
+}
+
+/* Scrollbar styling for modal */
+.modal-list-scroll::-webkit-scrollbar,
+#modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-list-scroll::-webkit-scrollbar-track,
+#modal-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal-list-scroll::-webkit-scrollbar-thumb,
+#modal-content::-webkit-scrollbar-thumb {
+    background: var(--node-border);
+    border-radius: 4px;
+}
+
+.modal-list-scroll::-webkit-scrollbar-thumb:hover,
+#modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
 }
