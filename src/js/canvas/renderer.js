@@ -146,6 +146,7 @@ export class Renderer {
 
     /**
      * Draw an edge between two nodes
+     * Includes a small dot at the source (parent) end to indicate direction
      */
     drawEdge(fromNode, toNode, viewport) {
         const { ctx, colors } = this;
@@ -160,6 +161,15 @@ export class Renderer {
         ctx.moveTo(from.x, from.y);
         ctx.lineTo(to.x, to.y);
         ctx.stroke();
+
+        // Draw a small dot at the source (parent) end to indicate direction
+        const dotRadius = 4 * viewport.scale;
+        if (dotRadius >= 2) {  // Only draw if visible
+            ctx.fillStyle = colors.nodeBorder;
+            ctx.beginPath();
+            ctx.arc(from.x, from.y, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     /**

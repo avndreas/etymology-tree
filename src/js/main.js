@@ -5,7 +5,7 @@
 import { Renderer } from './canvas/renderer.js';
 import { Viewport } from './canvas/viewport.js';
 import { Interaction } from './canvas/interaction.js';
-import { initDatabase, getStats } from './db/database.js';
+import { initDatabase, getStats, getTermById } from './db/database.js';
 import { buildTree, flattenTree } from './tree/builder.js';
 import { Search } from './search/search.js';
 import { SearchUI } from './search/ui.js';
@@ -127,13 +127,18 @@ class App {
      */
     initializeModal() {
         this.modal = new Modal({
-            onSelectTerm: (termId, parentNode) => {
+            onSelectTerm: (termId, parentNode, direction) => {
                 // When a term is clicked in the modal, add it connected to the parent node
-                this.addConnectedNode(termId, parentNode);
+                // direction: 'ancestor' (left) or 'descendant' (right)
+                this.addConnectedNode(termId, parentNode, direction);
             },
             onDeleteNode: (node) => {
                 // Remove the node and its subtree from the canvas
                 this.removeNodeTree(node);
+            },
+            onPruneLeaves: (node) => {
+                // Remove all leaf descendants (single pass, not recursive)
+                this.pruneLeaves(node);
             }
         });
     }
@@ -202,24 +207,13 @@ class App {
     }
 
     /**
-     * Add a new node connected to an existing node on the canvas
+     * Add a single new node connected to an existing node on the canvas
+     * Does not build out the new node's tree - just adds the single node
      * @param {string} termId - The term ID to add
-     * @param {object} parentNode - The node to connect to
+     * @param {object} clickedNode - The node that was clicked in the modal
+     * @param {string} direction - 'ancestor' (place left) or 'descendant' (place right)
      */
-    addConnectedNode(termId, parentNode) {
-        // Build a tree starting from the new term
-        const tree = buildTree(termId, 10);
-
-        if (!tree) {
-            console.warn('No tree found for term:', termId);
-            return;
-        }
-
-        // Flatten for rendering
-        const flatNodes = flattenTree(tree);
-
-        if (flatNodes.length === 0) return;
-
+    addConnectedNode(termId, clickedNode, direction = 'descendant') {
         // Check if this node is already on the canvas
         const existingNode = this.nodes.find(n => n.id === termId);
         if (existingNode) {
@@ -228,31 +222,68 @@ class App {
             return;
         }
 
-        // Position the new tree relative to the parent node
-        // Place it to the right of the parent (as a child) or left (as ancestor)
-        const offsetX = parentNode.x + 200;
-        const offsetY = parentNode.y;
-
-        // Layout the new tree
-        this.layoutTreeSimple(flatNodes, offsetX, offsetY);
-
-        // Connect the root of the new tree to the parent node visually
-        const newRoot = flatNodes[0];
-        newRoot.parent = parentNode;
-
-        // Add to parent's children array if not already there
-        if (!parentNode.children) {
-            parentNode.children = [];
-        }
-        if (!parentNode.children.includes(newRoot)) {
-            parentNode.children.push(newRoot);
+        // Get the term info from the database
+        const term = getTermById(termId);
+        if (!term) {
+            console.warn('Term not found:', termId);
+            return;
         }
 
-        // Add all new nodes to the canvas
-        this.nodes = [...this.nodes, ...flatNodes];
+        // Create a single node (matching the structure used by flattenTree)
+        const newNode = {
+            id: term.id,
+            term: term.term,
+            lang: term.lang,
+            children: []
+        };
+
+        if (direction === 'ancestor') {
+            // Ancestor: new node is the PARENT of clicked node
+            // Place to the LEFT of clicked node
+            newNode.x = clickedNode.x - 200;
+            newNode.y = clickedNode.y;
+
+            // The new node becomes a parent, clicked node becomes its child
+            newNode.children = [clickedNode];
+
+            // Update clicked node's parent reference
+            clickedNode.parent = newNode;
+
+            // Offset vertically if there would be overlap with existing nodes at this x position
+            const nodesAtSameX = this.nodes.filter(n => Math.abs(n.x - newNode.x) < 50);
+            if (nodesAtSameX.length > 0) {
+                const occupiedYs = nodesAtSameX.map(n => n.y);
+                let targetY = newNode.y;
+                while (occupiedYs.some(y => Math.abs(y - targetY) < 50)) {
+                    targetY += 60;
+                }
+                newNode.y = targetY;
+            }
+        } else {
+            // Descendant: new node is a CHILD of clicked node
+            // Place to the RIGHT of clicked node
+            newNode.x = clickedNode.x + 200;
+            newNode.y = clickedNode.y;
+            newNode.parent = clickedNode;
+
+            // Offset vertically if clicked node already has children
+            if (clickedNode.children && clickedNode.children.length > 0) {
+                const siblingCount = clickedNode.children.length;
+                newNode.y = clickedNode.y + siblingCount * 60;
+            }
+
+            // Add to clicked node's children array
+            if (!clickedNode.children) {
+                clickedNode.children = [];
+            }
+            clickedNode.children.push(newNode);
+        }
+
+        // Add to the canvas
+        this.nodes.push(newNode);
 
         // Center on the new node
-        this.viewport.centerOn(newRoot.x, newRoot.y);
+        this.viewport.centerOn(newNode.x, newNode.y);
     }
 
     /**
@@ -283,6 +314,48 @@ class App {
         this.nodes = this.nodes.filter(n => !nodesToRemove.has(n));
 
         console.log(`Removed ${nodesToRemove.size} nodes from canvas`);
+    }
+
+    /**
+     * Remove all leaf descendants of a node (single pass, not recursive)
+     * Does not remove the node itself, even if it's a leaf
+     * @param {object} node - The node whose leaves to prune
+     */
+    pruneLeaves(node) {
+        const leavesToRemove = new Set();
+
+        // Find all leaf descendants (but not the node itself)
+        const findLeaves = (n, isRoot) => {
+            if (!n.children || n.children.length === 0) {
+                // It's a leaf - mark for removal unless it's the root
+                if (!isRoot) {
+                    leavesToRemove.add(n);
+                }
+                return;
+            }
+            for (const child of n.children) {
+                findLeaves(child, false);
+            }
+        };
+
+        findLeaves(node, true);
+
+        if (leavesToRemove.size === 0) {
+            console.log('No leaves to prune');
+            return;
+        }
+
+        // Remove leaves from their parents' children arrays
+        for (const leaf of leavesToRemove) {
+            if (leaf.parent && leaf.parent.children) {
+                leaf.parent.children = leaf.parent.children.filter(c => c !== leaf);
+            }
+        }
+
+        // Filter out the removed leaves from the main nodes array
+        this.nodes = this.nodes.filter(n => !leavesToRemove.has(n));
+
+        console.log(`Pruned ${leavesToRemove.size} leaves`);
     }
 
     /**

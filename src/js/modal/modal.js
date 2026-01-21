@@ -14,6 +14,7 @@ export class Modal {
         // Callbacks
         this.onSelectTerm = options.onSelectTerm || (() => {});
         this.onDeleteNode = options.onDeleteNode || (() => {});
+        this.onPruneLeaves = options.onPruneLeaves || (() => {});
 
         // Current term being displayed
         this.currentTerm = null;
@@ -100,11 +101,13 @@ export class Modal {
             </div>
         `;
 
-        // Actions section (delete button)
+        // Actions section (delete and prune buttons)
         if (this.currentNode) {
+            const leafCount = this.countLeafDescendants(this.currentNode);
             html += `
                 <div class="modal-actions">
                     <button class="modal-delete-btn" title="Remove from canvas">Remove from canvas</button>
+                    ${leafCount > 0 ? `<button class="modal-prune-btn" title="Remove all leaf nodes (${leafCount})">Prune leaves (${leafCount})</button>` : ''}
                 </div>
             `;
         }
@@ -127,7 +130,7 @@ export class Modal {
             `;
         }
 
-        // Ancestors section (derived from)
+        // Ancestors section (derived from) - placed to the LEFT of current node
         html += `
             <div class="modal-section">
                 <h3 class="modal-section-title">
@@ -138,7 +141,7 @@ export class Modal {
                     ${ancestors.length > 0 ? `
                         <ul class="modal-term-list">
                             ${ancestors.map(a => `
-                                <li class="modal-term-item" data-id="${this.escapeHtml(a.id)}">
+                                <li class="modal-term-item" data-id="${this.escapeHtml(a.id)}" data-direction="ancestor">
                                     <span class="term-name">${this.escapeHtml(a.term)}</span>
                                     <span class="term-lang">${this.escapeHtml(a.lang)}</span>
                                     <span class="term-reltype">${this.formatRelType(a.reltype)}</span>
@@ -150,7 +153,7 @@ export class Modal {
             </div>
         `;
 
-        // Descendants section (gave rise to)
+        // Descendants section (gave rise to) - placed to the RIGHT of current node
         html += `
             <div class="modal-section">
                 <h3 class="modal-section-title">
@@ -161,7 +164,7 @@ export class Modal {
                     ${descendants.length > 0 ? `
                         <ul class="modal-term-list">
                             ${descendants.map(d => `
-                                <li class="modal-term-item" data-id="${this.escapeHtml(d.id)}">
+                                <li class="modal-term-item" data-id="${this.escapeHtml(d.id)}" data-direction="descendant">
                                     <span class="term-name">${this.escapeHtml(d.term)}</span>
                                     <span class="term-lang">${this.escapeHtml(d.lang)}</span>
                                     <span class="term-reltype">${this.formatRelType(d.reltype)}</span>
@@ -179,7 +182,8 @@ export class Modal {
         this.content.querySelectorAll('.modal-term-item').forEach(item => {
             item.addEventListener('click', () => {
                 const id = item.dataset.id;
-                this.onSelectTerm(id, this.currentNode);
+                const direction = item.dataset.direction; // 'ancestor' or 'descendant'
+                this.onSelectTerm(id, this.currentNode, direction);
             });
         });
 
@@ -193,6 +197,39 @@ export class Modal {
                 }
             });
         }
+
+        // Add click handler for prune button
+        const pruneBtn = this.content.querySelector('.modal-prune-btn');
+        if (pruneBtn) {
+            pruneBtn.addEventListener('click', () => {
+                if (this.currentNode) {
+                    this.onPruneLeaves(this.currentNode);
+                    // Re-render to update the leaf count
+                    this.render(this.currentTerm);
+                }
+            });
+        }
+    }
+
+    /**
+     * Count leaf descendants of a node (nodes with no children, excluding the node itself)
+     */
+    countLeafDescendants(node) {
+        let count = 0;
+
+        const countLeaves = (n, isRoot) => {
+            if (!n.children || n.children.length === 0) {
+                // It's a leaf - count it unless it's the root node
+                if (!isRoot) count++;
+                return;
+            }
+            for (const child of n.children) {
+                countLeaves(child, false);
+            }
+        };
+
+        countLeaves(node, true);
+        return count;
     }
 
     /**
