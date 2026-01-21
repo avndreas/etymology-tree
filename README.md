@@ -2,66 +2,11 @@
 
 An interactive etymology visualization tool that displays word origins as tree diagrams on an infinite scrollable/zoomable canvas.
 
-## Features
-
-- **Multi-language search**: Search for words in any of 2,280+ languages
-- **Interactive trees**: Click and drag trees, pan and zoom the canvas
-- **Etymology relationships**: Visual display of word origins with relationship types
-- **Related words modal**: Click any node to see all words that reference it
-- **Old-fashioned design**: Beige grid background with serif fonts
-- **Offline-first**: Works completely offline after initial database load
+Etymology database sourced from [etymology-db](https://github.com/droher/etymology-db)
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js (v16 or higher)
-- npm
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/avndreas/etymology.git
-cd etymology
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Build the database (if not already built):
-```bash
-npm run build-db
-```
-
-This will convert `Data/etymology.csv` to `Data/etymology.db`.
-
-4. Place the database file:
-   - Copy `Data/etymology.db` to the `public/` directory
-   - For production, compress it: `gzip -9 -c Data/etymology.db > public/etymology.db.gz`
-
-### Running in Development
-
-Start the development server:
-```bash
-npm run dev
-```
-
-The app will open at `http://localhost:3000`
-
-### Building for Production
-
-Build the optimized production bundle:
-```bash
-npm run build
-```
-
-Preview the production build:
-```bash
-npm run preview
-```
+This page will be updated when the project is more complete.
 
 ## Usage
 
@@ -132,7 +77,7 @@ etymology/
 - **Canvas**: Native Canvas 2D API
 - **Database**: SQLite with sql.js (WebAssembly)
 - **Build Tool**: Vite
-- **Styling**: CSS3 with custom beige theme
+- **Styling**: CSS3 with custom theme
 
 ### Database Schema
 
@@ -147,31 +92,8 @@ etymology/
 - `reltype` (TEXT) - Relationship type (e.g., "borrowed_from", "derived_from")
 - `position`, `group_tag`, `parent_tag`, `parent_position` - Hierarchy data
 
-### Key Algorithms
-
-- **Tree Building**: DAG traversal with cycle detection
-- **Layout**: Reingold-Tilford algorithm for clean tree visualization
-- **Viewport**: Coordinate transformation for pan/zoom
-- **Search**: Debounced autocomplete with LIKE queries
 
 ### Performance
 
-- Initial load: ~20 seconds (130 MB database)
-- Subsequent loads: <1 second (IndexedDB cache)
-- Search queries: <50ms
-- Rendering: 60 FPS with viewport culling
+Mostly TBD, initial load time before caching is ~20s
 
-## Browser Compatibility
-
-- Chrome/Edge (latest)
-- Firefox (latest)
-- Safari (latest)
-- Mobile browsers with touch support
-
-## License
-
-ISC
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
