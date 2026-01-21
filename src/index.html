@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etymology Explorer</title>
+    <link rel="stylesheet" href="./styles/main.css">
+    <link rel="stylesheet" href="./styles/search.css">
+    <link rel="stylesheet" href="./styles/modal.css">
+</head>
+<body>
+    <!-- Loading Overlay (shown while DB loads) -->
+    <div id="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Loading etymology database...</p>
+            <p class="loading-hint">First load may take ~20 seconds</p>
+        </div>
+    </div>
+
+    <!-- Search Bar (top of screen) -->
+    <div id="search-container">
+        <input
+            type="text"
+            id="search-input"
+            placeholder="Search for a word (e.g., 'etymology')"
+            autocomplete="off"
+        >
+        <div id="autocomplete-dropdown"></div>
+    </div>
+
+    <!-- Infinite Canvas (fills remaining space) -->
+    <canvas id="tree-canvas">
+        Your browser does not support the HTML canvas element.
+    </canvas>
+
+    <!-- Modal for Related Words -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal">
+            <button id="modal-close">&times;</button>
+            <h2 id="modal-title"></h2>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <!-- Scripts (ES modules) -->
+    <script type="module" src="./js/main.js"></script>
+</body>
+</html>

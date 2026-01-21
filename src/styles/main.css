@@ -1,0 +1,81 @@
+/* Reset & Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-color: #f5f0e6;        /* Beige background */
+    --grid-color: #e0d9c8;      /* Grid lines */
+    --text-color: #3a3226;      /* Dark brown text */
+    --accent-color: #8b7355;    /* Brown accent */
+    --node-bg: #fff9f0;         /* Node background */
+    --node-border: #c4b7a3;     /* Node border */
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+/* Canvas - fills entire viewport below search */
+#tree-canvas {
+    position: fixed;
+    top: 60px;  /* Below search bar */
+    left: 0;
+    width: 100%;
+    height: calc(100% - 60px);
+    cursor: grab;
+}
+
+#tree-canvas:active {
+    cursor: grabbing;
+}
+
+/* Loading Overlay */
+#loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+#loading-overlay.hidden {
+    display: none;
+}
+
+.loading-content {
+    text-align: center;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--grid-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-hint {
+    font-size: 0.9em;
+    color: var(--accent-color);
+    margin-top: 10px;
+}
+
+/* Utility */
+.hidden {
+    display: none !important;
+}
