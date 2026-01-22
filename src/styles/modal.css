@@ -22,8 +22,8 @@
     background: var(--node-bg);
     border: 2px solid var(--node-border);
     border-radius: 12px;
-    max-width: 520px;
-    width: 90%;
+    max-width: 1000px;
+    width: 95%;
     max-height: 85vh;
     position: relative;
     display: flex;
@@ -60,12 +60,15 @@
     background: var(--grid-color);
 }
 
-/* Modal content - scrollable */
+/* Modal content - no scroll, children handle their own scrolling */
 #modal-content {
     color: var(--text-color);
     padding: 24px;
-    overflow-y: auto;
+    overflow: hidden;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 /* Modal header with term and language */
@@ -73,8 +76,9 @@
     display: flex;
     align-items: baseline;
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     padding-right: 32px;
+    flex-shrink: 0;
 }
 
 .modal-title {
@@ -92,10 +96,11 @@
 
 /* Actions section */
 .modal-actions {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    flex-shrink: 0;
 }
 
 .modal-delete-btn,
@@ -129,25 +134,45 @@
     color: white;
 }
 
-/* Sections */
-.modal-section {
-    margin-bottom: 20px;
+/* Two-column row container for Derived from / Gave rise to */
+.modal-sections-row {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    flex: 0 1 auto;
+    min-height: 120px;
+    max-height: 200px;
 }
 
-.modal-section:last-child {
-    margin-bottom: 0;
+/* Sections */
+.modal-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* Definitions section at top - can take up to half the modal */
+.modal-section-definitions {
+    flex: 0 1 auto;
+    margin-bottom: 12px;
+}
+
+.modal-section-definitions .modal-list-scroll {
+    max-height: 40vh;
 }
 
 .modal-section-title {
     font-size: 0.95em;
     color: var(--accent-color);
-    margin: 0 0 10px 0;
+    margin: 0 0 6px 0;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    flex-shrink: 0;
 }
 
 .modal-section-count {
@@ -197,7 +222,8 @@
 
 /* Scrollable term lists */
 .modal-list-scroll {
-    max-height: 180px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     background: var(--background);
     border-radius: 8px;

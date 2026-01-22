@@ -112,25 +112,32 @@ export class Modal {
             `;
         }
 
-        // Definitions section (if available)
-        if (definitions.length > 0) {
-            html += `
-                <div class="modal-section">
-                    <h3 class="modal-section-title">Definitions</h3>
-                    <div class="modal-definitions">
-                        ${definitions.slice(0, 5).map(def => `
-                            <div class="definition-item">
-                                <span class="definition-pos">${this.escapeHtml(def.pos)}</span>
-                                <span class="definition-text">${this.escapeHtml(def.definition)}</span>
-                            </div>
-                        `).join('')}
-                        ${definitions.length > 5 ? `<div class="definition-more">+${definitions.length - 5} more definitions</div>` : ''}
-                    </div>
+        // Definitions section (full width at top)
+        html += `
+            <div class="modal-section modal-section-definitions">
+                <h3 class="modal-section-title">
+                    Definitions
+                    <span class="modal-section-count">(${definitions.length})</span>
+                </h3>
+                <div class="modal-list-scroll">
+                    ${definitions.length > 0 ? `
+                        <div class="modal-definitions">
+                            ${definitions.map(def => `
+                                <div class="definition-item">
+                                    <span class="definition-pos">${this.escapeHtml(def.pos)}</span>
+                                    <span class="definition-text">${this.escapeHtml(def.definition)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : '<p class="modal-empty">No definitions available</p>'}
                 </div>
-            `;
-        }
+            </div>
+        `;
 
-        // Ancestors section (derived from) - placed to the LEFT of current node
+        // Two-column row: Derived from and Gave rise to
+        html += `<div class="modal-sections-row">`;
+
+        // Ancestors section (derived from)
         html += `
             <div class="modal-section">
                 <h3 class="modal-section-title">
@@ -153,7 +160,7 @@ export class Modal {
             </div>
         `;
 
-        // Descendants section (gave rise to) - placed to the RIGHT of current node
+        // Descendants section (gave rise to)
         html += `
             <div class="modal-section">
                 <h3 class="modal-section-title">
@@ -175,6 +182,8 @@ export class Modal {
                 </div>
             </div>
         `;
+
+        html += `</div>`;
 
         this.content.innerHTML = html;
 

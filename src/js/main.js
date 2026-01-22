@@ -238,30 +238,9 @@ class App {
         };
 
         if (direction === 'ancestor') {
-            // Ancestor: new node is the PARENT of clicked node
-            // Place to the LEFT of clicked node
-            newNode.x = clickedNode.x - 200;
-            newNode.y = clickedNode.y;
-
-            // The new node becomes a parent, clicked node becomes its child
-            newNode.children = [clickedNode];
-
-            // Update clicked node's parent reference
-            clickedNode.parent = newNode;
-
-            // Offset vertically if there would be overlap with existing nodes at this x position
-            const nodesAtSameX = this.nodes.filter(n => Math.abs(n.x - newNode.x) < 50);
-            if (nodesAtSameX.length > 0) {
-                const occupiedYs = nodesAtSameX.map(n => n.y);
-                let targetY = newNode.y;
-                while (occupiedYs.some(y => Math.abs(y - targetY) < 50)) {
-                    targetY += 60;
-                }
-                newNode.y = targetY;
-            }
-        } else {
-            // Descendant: new node is a CHILD of clicked node
-            // Place to the RIGHT of clicked node
+            // Ancestor: the new node is what the clicked node derives FROM
+            // In the tree structure, etymological ancestors are CHILDREN (placed to the RIGHT)
+            // This matches how buildTree works: it follows "derived from" relationships as children
             newNode.x = clickedNode.x + 200;
             newNode.y = clickedNode.y;
             newNode.parent = clickedNode;
@@ -277,6 +256,30 @@ class App {
                 clickedNode.children = [];
             }
             clickedNode.children.push(newNode);
+        } else {
+            // Descendant: the new node derives FROM the clicked node
+            // In the tree structure, this means clicked node is an ancestor of the new node
+            // So the new node becomes the PARENT (placed to the LEFT), and clicked node becomes its child
+            newNode.x = clickedNode.x - 200;
+            newNode.y = clickedNode.y;
+
+            // New node becomes parent of clicked node
+            newNode.parent = clickedNode.parent; // new node inherits clicked node's old parent
+            clickedNode.parent = newNode;
+
+            // Add clicked node as child of new node
+            newNode.children = [clickedNode];
+
+            // Offset vertically if there would be overlap with existing nodes at this x position
+            const nodesAtSameX = this.nodes.filter(n => Math.abs(n.x - newNode.x) < 50);
+            if (nodesAtSameX.length > 0) {
+                const occupiedYs = nodesAtSameX.map(n => n.y);
+                let targetY = newNode.y;
+                while (occupiedYs.some(y => Math.abs(y - targetY) < 50)) {
+                    targetY += 60;
+                }
+                newNode.y = targetY;
+            }
         }
 
         // Add to the canvas

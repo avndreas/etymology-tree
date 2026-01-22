@@ -146,7 +146,7 @@ export class Renderer {
 
     /**
      * Draw an edge between two nodes
-     * Includes a small dot at the source (parent) end to indicate direction
+     * Includes a small dot where the edge meets the parent node's box
      */
     drawEdge(fromNode, toNode, viewport) {
         const { ctx, colors } = this;
@@ -154,20 +154,49 @@ export class Renderer {
         const from = viewport.worldToScreen(fromNode.x, fromNode.y);
         const to = viewport.worldToScreen(toNode.x, toNode.y);
 
+        // Calculate parent node's box dimensions (same formula as drawNode)
+        const padding = 12;
+        const baseFontSize = 14;
+        const fontSize = baseFontSize * viewport.scale;
+        ctx.font = `${fontSize}px Georgia`;
+        const textWidth = ctx.measureText(fromNode.term).width;
+        const boxWidth = textWidth + padding * 2 * viewport.scale;
+        const boxHeight = fontSize + padding * 2 * viewport.scale;
+        const halfWidth = boxWidth / 2;
+        const halfHeight = boxHeight / 2;
+
+        // Calculate direction from parent to child
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+
+        // Find intersection with parent's box edge
+        let intersectX = from.x;
+        let intersectY = from.y;
+
+        if (dx !== 0 || dy !== 0) {
+            // Scale factors to reach each edge
+            const scaleX = dx !== 0 ? halfWidth / Math.abs(dx) : Infinity;
+            const scaleY = dy !== 0 ? halfHeight / Math.abs(dy) : Infinity;
+            const scale = Math.min(scaleX, scaleY);
+
+            intersectX = from.x + dx * scale;
+            intersectY = from.y + dy * scale;
+        }
+
+        // Draw edge line
         ctx.strokeStyle = colors.nodeBorder;
         ctx.lineWidth = 2 * viewport.scale;
-
         ctx.beginPath();
         ctx.moveTo(from.x, from.y);
         ctx.lineTo(to.x, to.y);
         ctx.stroke();
 
-        // Draw a small dot at the source (parent) end to indicate direction
+        // Draw dot at intersection point
         const dotRadius = 4 * viewport.scale;
-        if (dotRadius >= 2) {  // Only draw if visible
+        if (dotRadius >= 2) {
             ctx.fillStyle = colors.nodeBorder;
             ctx.beginPath();
-            ctx.arc(from.x, from.y, dotRadius, 0, Math.PI * 2);
+            ctx.arc(intersectX, intersectY, dotRadius, 0, Math.PI * 2);
             ctx.fill();
         }
     }
