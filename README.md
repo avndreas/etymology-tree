@@ -39,6 +39,9 @@ Etymology database sourced from [etymology-db](https://github.com/droher/etymolo
 2. Select from the autocomplete dropdown
 3. The etymology tree will appear on the canvas
 
+<img width="824" height="547" alt="search" src="https://github.com/user-attachments/assets/8911d60e-0974-4021-ab48-e0af034f661a" />
+<img width="1238" height="726" alt="small_tree" src="https://github.com/user-attachments/assets/34efecec-c36b-40da-9c99-57c089702201" />
+
 ### Interacting with the Canvas
 
 - **Pan**: Click and drag empty space
@@ -46,12 +49,21 @@ Etymology database sourced from [etymology-db](https://github.com/droher/etymolo
 - **Move trees**: Click and drag individual nodes
 - **Click nodes**: Click any node to see related words
 
+<img width="2256" height="1319" alt="definition" src="https://github.com/user-attachments/assets/e6204dcd-4c1a-4b3a-9dd9-69943cd3b1c5" />
+
 ### Related Words Modal
 
 - Click any node to open the modal
 - See all words that reference this word in their etymology
 - Search within results to filter
 - Click any result to add that word's tree to the canvas
+
+### Deleting and Pruning
+
+- Each node modal has a button to delete it and all of its children
+- Each node modal has a "prune leaves" button that deletes all leaf-nodes of the tree. Useful for very large and complicated etymologies.
+
+<img width="1179" height="713" alt="small_pruned" src="https://github.com/user-attachments/assets/81083bdf-d751-4b9b-8b10-8e2d850cd4cb" />
 
 ## Project Structure
 
@@ -115,6 +127,12 @@ etymology/
 - `reltype` (TEXT) - Relationship type (e.g., "borrowed_from", "derived_from")
 - `position`, `group_tag`, `parent_tag`, `parent_position` - Hierarchy data
 
+### Known Bugs and Issues to Fix
+
+- Some issues with parenting newly added nodes from the modal (adding words directly from the "Gave Rise To" menu)
+- Some nodes don't get deleted with their parents
+- Other languages' words should have definitions
+- There should be a language filter
 
 ### Performance
 
