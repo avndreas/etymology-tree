@@ -2,6 +2,8 @@
 
 An interactive etymology visualization tool that displays word origins as tree diagrams on an infinite scrollable/zoomable canvas.
 
+**This was a project I made to test the capabilities of Claude Code. Most code was written with the help of Claude Code.**
+
 Etymology database sourced from [etymology-db](https://github.com/droher/etymology-db)
 
 ## Getting Started
