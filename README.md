@@ -6,7 +6,30 @@ Etymology database sourced from [etymology-db](https://github.com/droher/etymolo
 
 ## Getting Started
 
-This page will be updated when the project is more complete.
+1. Clone the repository and install dependencies:
+   ```bash
+   git clone https://github.com/avndreas/etymology.git
+   cd etymology
+   npm install
+   ```
+
+2. Download the database files from the [latest release](https://github.com/avndreas/etymology/releases/latest) and place them in the `public/` folder:
+   - `etymology.db.xz` → `public/etymology.db.xz`
+   - `wordnet.db.xz` → `public/wordnet.db.xz`
+
+   Then decompress them:
+   ```bash
+   # On Mac/Linux
+   unxz -k public/etymology.db.xz
+   unxz -k public/wordnet.db.xz
+
+   # On Windows — use 7-Zip to extract the .xz files into public/
+   ```
+
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
 ## Usage
 

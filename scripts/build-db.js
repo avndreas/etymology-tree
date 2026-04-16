@@ -24,7 +24,7 @@ const CSV_PATH = path.join(__dirname, '../Data/etymology.csv');
 const DB_PATH = path.join(__dirname, '../Data/etymology.db');
 
 // For testing with a small subset (set to 0 to process all rows)
-const LIMIT_ROWS = 1000; // Start with 1000 rows to test, then set to 0 for full run
+const LIMIT_ROWS = 0; // Start with 1000 rows to test, then set to 0 for full run
 
 console.log('Etymology Database Builder');
 console.log('==========================');

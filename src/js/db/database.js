@@ -8,11 +8,16 @@
  * 4. Provides query functions for search and tree building
  */
 import initSqlJs from 'sql.js';
+import LZMA from 'lzma/src/lzma.js';
 
 // Database singletons
 let db = null;
 let wordnetDb = null;
 let SQL = null;
+
+// DB URLs — override via .env.production for hosted builds
+const ETYMOLOGY_DB_URL = import.meta.env.VITE_ETYMOLOGY_DB_URL || '/etymology.db';
+const WORDNET_DB_URL = import.meta.env.VITE_WORDNET_DB_URL || '/wordnet.db';
 
 // IndexedDB cache config
 const DB_CACHE_NAME = 'etymology-db-cache';
@@ -44,24 +49,7 @@ export async function initDatabase(onProgress = () => {}) {
         onProgress('Loading from cache...');
     } else {
         onProgress('Downloading database (this may take a while)...');
-
-        // Fetch the database file
-        const response = await fetch('/etymology.db');
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch database: ${response.status}`);
-        }
-
-        // Get total size for progress
-        const contentLength = response.headers.get('Content-Length');
-        const total = contentLength ? parseInt(contentLength, 10) : 0;
-
-        // Read the response as an ArrayBuffer with progress tracking
-        if (total > 0) {
-            dbData = await readWithProgress(response, total, onProgress);
-        } else {
-            dbData = await response.arrayBuffer();
-        }
+        dbData = await fetchDatabase(ETYMOLOGY_DB_URL, onProgress);
 
         // Cache for next time
         onProgress('Caching database...');
@@ -92,26 +80,16 @@ async function loadWordNetDatabase(onProgress) {
     } else {
         onProgress('Downloading WordNet dictionary...');
 
-        const response = await fetch('/wordnet.db');
-
-        if (!response.ok) {
-            console.warn('WordNet database not available, definitions will be disabled');
-            return;
-        }
-
-        const contentLength = response.headers.get('Content-Length');
-        const total = contentLength ? parseInt(contentLength, 10) : 0;
-
-        if (total > 0) {
-            wordnetData = await readWithProgress(response, total, (msg) => {
-                // Rewrite progress message for WordNet
+        try {
+            wordnetData = await fetchDatabase(WORDNET_DB_URL, (msg) => {
                 if (msg.includes('%')) {
                     const percent = msg.match(/(\d+)%/)[1];
                     onProgress(`Downloading WordNet dictionary... ${percent}%`);
                 }
             });
-        } else {
-            wordnetData = await response.arrayBuffer();
+        } catch {
+            console.warn('WordNet database not available, definitions will be disabled');
+            return;
         }
 
         onProgress('Caching WordNet...');
@@ -119,6 +97,33 @@ async function loadWordNetDatabase(onProgress) {
     }
 
     wordnetDb = new SQL.Database(new Uint8Array(wordnetData));
+}
+
+/**
+ * Fetch a database file, decompressing gzip on the fly if the URL ends in .gz
+ */
+async function fetchDatabase(url, onProgress) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to fetch database: ${response.status}`);
+
+    const contentLength = response.headers.get('Content-Length');
+    const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+    if (url.endsWith('.xz')) {
+        const compressed = total > 0
+            ? await readWithProgress(response, total, onProgress)
+            : await response.arrayBuffer();
+        onProgress('Decompressing database...');
+        return await new Promise((resolve, reject) => {
+            LZMA.decompress(new Uint8Array(compressed), (result, error) => {
+                if (error) return reject(new Error(error));
+                resolve(new Uint8Array(result).buffer);
+            });
+        });
+    }
+
+    if (total > 0) return await readWithProgress(response, total, onProgress);
+    return await response.arrayBuffer();
 }
 
 /**
